@@ -31,25 +31,24 @@ class Board():
 		valid = True
 
 		for i in range(4):
+			# Get position of each mino
+			x, y = check_piece.positions[i]
 
 			# Check for out of bounds
-			if x < 0 or x > 9:
+			if x < 0 or x >= minos_x:
 				valid = False
+				continue
 
-			if y < 0 or y > 21:
+			if y < 0 or y >= minos_y:
 				valid = False
-			
+				continue
 
 			# Check for collison
-			x, y = check_piece.positions[i]
 			if self.board[x, y].any() != 0:
 				valid = False
 				continue
 
-
-
-		print(valid)
-
+		
 		return valid
 
 
@@ -58,32 +57,84 @@ class Piece():
 	def __init__(self, x, y, seed):
 		self.x = x
 		self.y = y
+		self.seed = seed
 		self.shape = shapes[seed]
 		self.color = colors[seed]
 		self.rotation = 0
+		self.stuck_counter = 0
 		# positions of all 4 minos
 		self.positions = np.asarray([(self.x + self.shape[self.rotation,0,0], self.y + self.shape[self.rotation,0,1]),
 						(self.x + self.shape[self.rotation,1,0], self.y + self.shape[self.rotation,1,1]),
 						(self.x + self.shape[self.rotation,2,0], self.y + self.shape[self.rotation,2,1]),
 						(self.x + self.shape[self.rotation,3,0], self.y + self.shape[self.rotation,3,1])])
 
+	def update_positions(self):
+		self.positions = np.asarray([(self.x + self.shape[self.rotation,0,0], self.y + self.shape[self.rotation,0,1]),
+						(self.x + self.shape[self.rotation,1,0], self.y + self.shape[self.rotation,1,1]),
+						(self.x + self.shape[self.rotation,2,0], self.y + self.shape[self.rotation,2,1]),
+						(self.x + self.shape[self.rotation,3,0], self.y + self.shape[self.rotation,3,1])])
+	
 	def move_left(self):
-		pass
+		self.x -= 1
+		self.update_positions()
+		if play_board.is_valid(self):
+			self.stuck_counter = 0
+			return 0
+		else: 
+			self.x += 1
+			self.update_positions()
+			return 1
 
-	def move_right(self):
-		pass
+	def move_right(self):		
+		self.x += 1
+		self.update_positions()
+		if play_board.is_valid(self):
+			self.stuck_counter = 0
+			return 0
+		else: 
+			self.x -= 1
+			self.update_positions()
+			return 1
 
 	def move_down(self):
-		pass
+		self.y -= 1
+		self.update_positions()
+		if play_board.is_valid(self):
+			self.stuck_counter = 0
+			return 0
+		else:
+			self.y += 1
+			self.update_positions()
+			self.stuck_counter += 1
+			return 1
 
 	def move_up(self):
-		pass
+		self.y += 1
+		self.update_positions()
+		if play_board.is_valid(self):
+			self.stuck_counter = 0
+			return 0
+		else:
+			self.y -= 1
+			self.update_positions()
+			return 1
+			
 
 	def drop(self):
-		pass
+		while (self.move_down() == 0):
+			pass
 
 	def rotate(self):
 		pass
+
+
+def get_new_piece():
+	seed = random.randint(0, 6)
+	if seed == 0:
+		return Piece(3, 17, seed)	#ToDo: Need to set y to 18
+	else:
+		return Piece(3, 18, seed)	#ToDo: Need to set y to 19
+
 
 
 #pixel size of each block
@@ -91,7 +142,7 @@ block_size = 30
 display_width = 600
 display_height = 800
 top_x = 20
-top_y = 20
+top_y = 60
 
 
 pygame.init()
@@ -101,13 +152,14 @@ pygame.display.set_caption('Tetris')
 clock = pygame.time.Clock()
 
 
+
 #####################################################################################################################
 play_board = Board()
-active_piece = Piece(0, 0, 5)
-
+active_piece = get_new_piece()
 
 
 play_board.is_valid(active_piece)
+
 
 
 def draw_board():
@@ -128,15 +180,49 @@ def draw_board():
 	for i in range(minos_y + 1):
 			pygame.draw.line(display, (128,128,128), (top_x + 0, top_y + i*block_size), (top_x + minos_x*block_size ,top_y + i*block_size), 1)
 
+	pygame.display.flip()
 
-crashed = False
 
-while not crashed:
+fall_time = 0
+fall_speed = 0.5
+
+run = True
+
+while run:
+
+	fall_time += clock.get_rawtime()
+
+	if fall_time/100 >= fall_speed:
+		fall_time = 0
+		active_piece.move_down()
+
+		# If piece is stuck for 3 consecutive ticks without movement, it gets added to the board and a new piece is generated
+		if active_piece.stuck_counter == 2:
+			for i in range(4):
+				play_board.board[active_piece.positions[i,0], active_piece.positions[i,1]] = active_piece.color
+				print('asd')
+
+			active_piece = get_new_piece()
+
+
 
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
-			crashed = True
+			run = False
 
+		if event.type == pygame.KEYDOWN:
+			if event.key == pygame.K_LEFT:
+				active_piece.move_left()
+				draw_board()
+			if event.key == pygame.K_RIGHT:
+				active_piece.move_right()
+				draw_board()
+			if event.key == pygame.K_DOWN:
+				active_piece.move_down()
+				draw_board()
+			if event.key == pygame.K_SPACE:
+				active_piece.drop()
+				draw_board()
 
 	
 	draw_board()
