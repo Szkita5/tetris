@@ -17,7 +17,7 @@ S = np.asarray([[(0,1),(1,1),(1,0),(2,0)],[(1,0),(1,1),(2,1),(2,2)],[(0,2),(1,2)
 T = np.asarray([[(0,1),(1,1),(1,0),(2,1)],[(1,0),(1,1),(1,2),(2,1)],[(0,1),(1,1),(2,1),(1,2)],[(0,1),(1,0),(1,1),(1,2)]])
 Z = np.asarray([[(0,0),(1,0),(1,1),(2,1)],[(1,1),(1,2),(2,0),(2,1)],[(0,1),(1,1),(1,2),(2,2)],[(0,1),(0,2),(1,0),(1,1)]])
 
-shapes = [S, Z, I, O, J, L, T]
+shapes = np.asarray([S, Z, I, O, J, L, T])
 colors = [(255,255,255),(0,0,255),(255,165,0),(255,255,0),(0,255,0),(128,0,128),(255,0,0)]
 
 class Board():
@@ -25,6 +25,7 @@ class Board():
 		# Board is 22 mino tall and 10 mino wide. Only bottom 20 rows are visible
 		# Board itself is a selection of coloured squares
 		self.board = np.zeros((minos_x, minos_y + 2, 3), dtype = np.int)
+		
 
 	def is_valid(self, Piece):
 		pass
@@ -45,10 +46,11 @@ class Piece():
 						(self.x + self.shape[self.rotation,1,0], self.y + self.shape[self.rotation,1,1]),
 						(self.x + self.shape[self.rotation,2,0], self.y + self.shape[self.rotation,2,1]),
 						(self.x + self.shape[self.rotation,3,0], self.y + self.shape[self.rotation,3,1])]
-		self.color = colors[shapes.index(self.shape)]
 
+		#print(shapes.index(self.shape))
+		#self.color = colors[shapes.index(self.shape)]
 
-
+print(np.where(shapes == L))
 
 #pixel size of each block
 block_size = 30
@@ -61,13 +63,14 @@ top_y = 20
 
 
 pygame.init()
+pygame.quit()
+
 display = pygame.display.set_mode((display_width,display_height))
 pygame.display.set_caption('Tetris')
 clock = pygame.time.Clock()
 
 play_board = Board()
-
-print(play_board.board.shape)
+active_piece = Piece(5, 10, L)
 
 crashed = False
 
@@ -77,10 +80,13 @@ while not crashed:
 		if event.type == pygame.QUIT:
 			crashed = True
 
+	# Draw the piece minos
+	
+	# Draw the board minos
 	for i in range(play_board.board.shape[0]):
 		for j in range(play_board.board.shape[1]):
-			#pygame.draw.rect(display, play_board[i, j], ())
-			pass
+			pygame.draw.rect(display, play_board.board[i, j], ((top_x + i*block_size,top_y + (minos_y-1)*block_size - (j*block_size)),(block_size,block_size)))
+			
 
 
 	# Draw grid lines
