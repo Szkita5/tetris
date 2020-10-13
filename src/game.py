@@ -128,13 +128,56 @@ class Piece():
 		pass
 
 
-def get_new_piece():
-	seed = random.randint(0, 6)
-	if seed == 0:
-		return Piece(3, 17, seed)	#ToDo: Need to set y to 18
-	else:
-		return Piece(3, 18, seed)	#ToDo: Need to set y to 19
+# Create a Bag class that holds the seeds, and returns a piece from the bag
+class Bag():
 
+	def __init__(self, bags_number):
+		self.bags_number = bags_number
+		self.refill_bags()
+		
+		self.next_piece = self.get_new_piece()
+
+	def refill_bags(self):
+		self.bags = []
+		for i in range(self.bags_number):
+			self.bags.append([0,1,2,3,4,5,6])
+
+		print(self.bags)
+
+	def get_new_piece(self):
+		# Find random seed form the bags
+		bag = random.randint(0, self.bags_number-1)
+
+		# Cannot chose from empty array
+		success = False
+		tries = 0
+		while (not success):
+			tries = tries + 1
+			try:
+				seed = random.choice(self.bags[bag])
+				success = True
+			except IndexError:
+				bag = (bag+1) % 3
+				if (tries == 3):
+					self.refill_bags()
+		
+		# Remove seed from bags
+		self.bags[bag].remove(seed)
+		print(self.bags)
+
+		
+		if seed == 0:
+			return Piece(3, 17, seed)	#ToDo: Need to set y to 18
+		else:
+			return Piece(3, 18, seed)	#ToDo: Need to set y to 19
+
+	def peek_next_piece(self):
+		return self.next_piece
+
+	def get_next_piece(self):
+		out = self.next_piece
+		self.next_piece = self.get_new_piece()
+		return out
 
 
 #pixel size of each block
@@ -143,8 +186,35 @@ display_width = 600
 display_height = 800
 top_x = 20
 top_y = 60
+next_x = top_x + 11 * block_size
+next_y = top_y + 2 * block_size
+
+def draw_board():
+	# Draw the board minos
+	for i in range(play_board.board.shape[0]):
+		for j in range(play_board.board.shape[1]):
+			pygame.draw.rect(display, play_board.board[i, j], ((top_x + i*block_size, top_y + (minos_y-1)*block_size - (j*block_size)),(block_size,block_size)))
+
+	# Draw the active piece minos
+	for i in range(4):
+		pygame.draw.rect(display, active_piece.color, ((top_x + active_piece.positions[i,0] * block_size, top_y + (minos_y-1)*block_size - (active_piece.positions[i,1]*block_size)),(block_size, block_size)))
+
+	# Draw next piece
+	for i in range(4):
+		pygame.draw.rect(display, next_piece.color, ((next_x + next_piece.positions[i,0] * block_size, next_y + (minos_y-1)*block_size - (next_piece.positions[i,1]*block_size)),(block_size, block_size)))
+
+	# Draw grid lines
+	for i in range(minos_x + 1):
+		pygame.draw.line(display, (128,128,128), (top_x + i*block_size, top_y + 0), (top_x + i*block_size, top_y + minos_y*block_size), 1)
+
+	for i in range(minos_y + 1):
+		pygame.draw.line(display, (128,128,128), (top_x + 0, top_y + i*block_size), (top_x + minos_x*block_size ,top_y + i*block_size), 1)
+
+	pygame.display.flip()
 
 
+
+######################################################################################################################
 pygame.init()
 
 display = pygame.display.set_mode((display_width,display_height))
@@ -154,37 +224,19 @@ clock = pygame.time.Clock()
 
 
 #####################################################################################################################
+
+piece_bags = Bag(3)
 play_board = Board()
-active_piece = get_new_piece()
+active_piece = piece_bags.get_new_piece()
+next_piece = piece_bags.peek_next_piece()
 
 
 play_board.is_valid(active_piece)
 
 
 
-def draw_board():
-	# Draw the board minos
-	for i in range(play_board.board.shape[0]):
-			for j in range(play_board.board.shape[1]):
-					pygame.draw.rect(display, play_board.board[i, j], ((top_x + i*block_size, top_y + (minos_y-1)*block_size - (j*block_size)),(block_size,block_size)))
-
-	# Draw the active piece minos
-	for i in range(4):
-			pygame.draw.rect(display, active_piece.color, ((top_x + active_piece.positions[i,0] * block_size, top_y + (minos_y-1)*block_size - (active_piece.positions[i,1]*block_size)),(block_size, block_size)))
-
-
-	# Draw grid lines
-	for i in range(minos_x + 1):
-			pygame.draw.line(display, (128,128,128), (top_x + i*block_size, top_y + 0), (top_x + i*block_size, top_y + minos_y*block_size), 1)
-
-	for i in range(minos_y + 1):
-			pygame.draw.line(display, (128,128,128), (top_x + 0, top_y + i*block_size), (top_x + minos_x*block_size ,top_y + i*block_size), 1)
-
-	pygame.display.flip()
-
-
 fall_time = 0
-fall_speed = 0.5
+fall_speed = 1.0
 
 run = True
 
@@ -200,9 +252,9 @@ while run:
 		if active_piece.stuck_counter == 2:
 			for i in range(4):
 				play_board.board[active_piece.positions[i,0], active_piece.positions[i,1]] = active_piece.color
-				print('asd')
 
-			active_piece = get_new_piece()
+			active_piece = piece_bags.get_new_piece()
+			next_piece = piece_bags.peek_next_piece()
 
 
 
